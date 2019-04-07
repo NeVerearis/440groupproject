@@ -8,6 +8,9 @@ from werkzeug.local import LocalProxy
 
 from wiki.core import Wiki
 from wiki.web.user import UserManager
+# import wiki.web.routes
+
+import unittest
 
 class WikiError(Exception):
     pass
@@ -46,6 +49,31 @@ def create_app(directory):
     from wiki.web.routes import bp
     app.register_blueprint(bp)
 
+    class TestAutocomplete(unittest.TestCase):
+
+        def test_toa(self):
+            with app.test_request_context():
+                import wiki.web.routes
+                self.assertEquals("<a href='/toast'>Toast</a>", routes.autocomplete("toa"))
+
+        def test_noresult(self):
+            with app.test_request_context():
+                import wiki.web.routes
+                self.assertEquals("", routes.autocomplete("toankal"))
+
+        def test_home(self):
+            with app.test_request_context():
+                import wiki.web.routes
+                self.assertEquals("<a href='/home'>test</a>", routes.autocomplete("test"))
+
+    def suite():
+        suite = unittest.TestSuite()
+        suite.addTest(unittest.makeSuite(TestAutocomplete))
+        return suite
+
+    runner = unittest.TextTestRunner()
+    runner.run(suite())
+
     return app
 
 
@@ -55,3 +83,4 @@ loginmanager.login_view = 'wiki.user_login'
 @loginmanager.user_loader
 def load_user(name):
     return current_users.get_user(name)
+

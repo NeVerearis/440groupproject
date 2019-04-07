@@ -22,7 +22,6 @@ from wiki.web import current_wiki
 from wiki.web import current_users
 from wiki.web.user import protect
 
-
 bp = Blueprint('wiki', __name__)
 
 
@@ -78,7 +77,7 @@ def edit(url):
 @protect
 def autocomplete(query):
     result = "";
-    if(current_wiki.search(query, 1)[0]):
+    if(current_wiki.search(query, 1)):
         url = current_wiki.search(query, 1)[0].url
         name = current_wiki.search(query, 1)[0].title
         result = "<a href='/" + url + "'>" + name + "</a>"
