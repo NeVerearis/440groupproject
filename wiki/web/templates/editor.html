@@ -12,11 +12,14 @@ Wiki Editor
 <div class="tab-content">
 	<div class="tab-pane active" id="editor">
 		<form method="post" class="form" style="position: relative;">
+            <div style="position: relative;">
+                <div onclick="changeText()" id="autocomplete" style="margin-right: 50px; cursor: pointer; user-select: none; top: 50px; left: 0; display: none; background-color: lightgray; padding: 4px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8); border-radius: 4px;"></div>
+                <div onclick="cancelText()" id="autocancel" style="position: absolute; cursor: pointer; user-select: none; top: 50px; right: 0; display: none; background-color: lightgray; padding: 4px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8); border-radius: 4px;">x</div>
+            </div>
 			{{ form.hidden_tag() }}
 			{{ input(form.title, placeholder="Title", class="span7", autocomplete="off") }}
 			{{ input(form.body, placeholder="Markdown", class="span7", rows="20") }}
 			{{ input(form.tags, placeholder="Tags (comma separated)", class="span7", autocomplete="off") }}
-            <div onclick="changeText()" id="autocomplete" style="cursor: pointer; user-select: none; top: 50px; left: 0; display: none; background-color: lightgray; padding: 4px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8); border-radius: 4px;"></div>
 			<div class="form-actions">
         <div class="pull-left">
           <a class="btn" href="#preview" id="previewbtn">Preview</a>
@@ -82,6 +85,9 @@ $('#previewlink').on('click', function() {
     }
   });
 });
+
+var cancelled = false;
+
 $('#previewbtn').on('click', function(event) {
 	event.preventDefault();
 	$('#previewlink').click();
@@ -89,62 +95,84 @@ $('#previewbtn').on('click', function(event) {
 $('#editor form textarea').on('keyup', function(event){
     var form = document.querySelector("#editor form textarea");
     var autocomplete = document.querySelector("#autocomplete");
+    var autocancel = document.querySelector("#autocancel");
 
     var val = form.value;
-    val = val.substr(val.lastIndexOf(" ") + 1);
+    var index = val.lastIndexOf(" ");
+    val = val.substr(index + 1);
 
     if(val.length >= 3){
         var url = "/autocomplete/" + val;
+        var code = event.which;
+        if(code == '13')
+            changeText();
+        else if(code == '27')
+            cancelText();
+        else{
+            $.ajax({
+                type: "GET",
+                url: url
+            }).done(function( result ) {
 
-        $.ajax({
-            type: "GET",
-            url: url
-        }).done(function( result ) {
+                if(result){
+                        console.log(result);
+                        autocomplete.style.display = "block";
+                        autocancel.style.display = "block";
+                        autocomplete.innerHTML = result;
 
-            if(result){
-                console.log(result);
-                autocomplete.style.display = "block";
-                autocomplete.innerHTML = result;
+                        var div = document.createElement("DIV");
+                        div.innerHTML = autocomplete.firstChild.innerHTML;
+                        autocomplete.firstChild.style.display = "none";
+                        autocomplete.appendChild(div);
 
-                var div = document.createElement("DIV");
-                div.innerHTML = autocomplete.firstChild.innerHTML;
-                autocomplete.firstChild.style.display = "none";
-                autocomplete.appendChild(div);
+                        autocomplete.style.position = "absolute";
 
-                autocomplete.style.position = "absolute";
-
-                var code = event.which;
-                if(code == '13')
-                    changeText();
-            }
-            else{
-                autocomplete.style.display = "none";
-            }
-        }).fail(function( result ){
-                autocomplete.style.display = "none";
-        });
+                        cancelled = false;
+                }
+                else{
+                    autocomplete.style.display = "none";
+                    autocancel.style.display = "none";
+                    cancelled = false;
+                }
+            }).fail(function( result ){
+                    autocomplete.style.display = "none";
+                    autocancel.style.display = "none";
+                    cancelled = false;
+            });
+        }
     }
     else{
         autocomplete.style.display = "none";
+        autocancel.style.display = "none";
     }
 });
 function changeText(){
-    var form = document.querySelector("#editor form textarea");
-    var autocomplete = document.querySelector("#autocomplete");
+    if(!cancelled){
+        var form = document.querySelector("#editor form textarea");
+        var autocomplete = document.querySelector("#autocomplete");
+        var autocancel = document.querySelector("#autocancel");
 
-    autocomplete.firstChild.style.display = "";
-    autocomplete.style.display = "none";
-    var anchortext = autocomplete.firstChild.outerHTML;
+        autocomplete.firstChild.style.display = "";
+        autocomplete.style.display = "none";
+        autocancel.style.display = "none";
+        var anchortext = autocomplete.firstChild.outerHTML;
 
-    var val = form.value;
-    if(val.indexOf(" ")){
-        val = val.substr(0, val.lastIndexOf(" "));
-        val = val + " " + anchortext;
+        var val = form.value;
+        if(val.indexOf(" ") || val.indexOf("\n")){
+            var index = Math.max(val.lastIndexOf(" "), val.lastIndexOf("\n"));
+            val = val.substr(0, index);
+            val = val + " " + anchortext;
+        }
+        else{
+            val = anchorText;
+        }
+
+        form.value = val;
     }
-    else{
-        val = anchorText;
-    }
-
-    form.value = val;
+}
+function cancelText(){
+    cancelled = true;
+    document.querySelector("#autocomplete").style.display = "none";
+    document.querySelector("#autocancel").style.display = "none";
 }
 {%- endblock postscripts %}
